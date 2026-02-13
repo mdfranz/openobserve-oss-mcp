@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class OpenObserveClient:
@@ -34,6 +37,17 @@ class OpenObserveClient:
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         url = f"{self.base_url}/{path.lstrip('/')}"
+        params = kwargs.get("params")
+        json_body = kwargs.get("json")
+        if isinstance(json_body, dict) and "query" in json_body and isinstance(json_body["query"], dict):
+            query = json_body["query"]
+            sql = query.get("sql")
+            if sql is not None:
+                logger.info("openobserve request: %s %s sql=%s params=%s", method, url, sql, params)
+            else:
+                logger.info("openobserve request: %s %s params=%s", method, url, params)
+        else:
+            logger.info("openobserve request: %s %s params=%s", method, url, params)
         headers = dict(self._auth_headers())
         headers.update(kwargs.pop("headers", {}))
         auth = None if self.access_key else (self.email, self.password)

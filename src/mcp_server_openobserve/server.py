@@ -1,12 +1,25 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any, Iterable
 
 from fastmcp import FastMCP
 
 from .client import OpenObserveClient
+
+logger = logging.getLogger(__name__)
+
+
+def _ensure_debug_logging() -> None:
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+        )
+    logger.setLevel(logging.INFO)
 
 
 def _parse_kv_pairs(pairs: Iterable[str]) -> dict[str, str]:
@@ -57,6 +70,7 @@ def create_mcp_server(
     max_chars: int = 50_000,
     auth: Any | None = None,
 ) -> FastMCP:
+    _ensure_debug_logging()
     mcp = FastMCP(
         name="mcp-server-openobserve",
         instructions=(
@@ -93,6 +107,15 @@ def create_mcp_server(
         size: int = 100,
         offset: int = 0,
     ) -> Any:
+        logger.info(
+            "search_sql request: sql=%s hours=%s start_micros=%s end_micros=%s size=%s offset=%s",
+            sql,
+            hours,
+            start_micros,
+            end_micros,
+            size,
+            offset,
+        )
         now = int(time.time() * 1_000_000)
         if hours is not None:
             start_micros = now - hours * 60 * 60 * 1_000_000
@@ -106,6 +129,14 @@ def create_mcp_server(
             effective_size = min(effective_size, max_rows)
         effective_offset = max(0, int(offset))
 
+        logger.info(
+            "search_sql call: api/%s/_search start=%s end=%s size=%s offset=%s",
+            client.org,
+            start,
+            end,
+            effective_size,
+            effective_offset,
+        )
         result = client.search(
             sql=sql,
             start_time_micros=start,
@@ -122,6 +153,7 @@ def create_mcp_server(
         annotations=read_only_annotations,
     )
     def list_streams() -> Any:
+        logger.info("list_streams call: api/%s/streams", client.org)
         result = client.list_streams()
         return _apply_max_chars(result, max_chars)
 
@@ -140,6 +172,7 @@ def create_mcp_server(
             raise ValueError(f"Path must be healthz or start with {allowed_prefix}")
 
         params = _parse_kv_pairs(param or [])
+        logger.info("get_api call: path=%s params=%s", cleaned, params or None)
         result = client.get(cleaned, params=params or None)
         return _apply_max_chars(result, max_chars)
 
