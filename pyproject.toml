@@ -1,0 +1,27 @@
+[project]
+name = "mcp-server-openobserve"
+version = "0.1.0"
+description = "An MCP server for querying OpenObserve (read/query only)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastmcp>=2.14,<3",
+  "requests>=2.31",
+]
+
+[project.scripts]
+mcp-server-openobserve = "mcp_server_openobserve.main:main"
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "pytest",
+]
+
+
+[tool.ruff]
+line-length = 100
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
