@@ -38,7 +38,9 @@ class OpenObserveConnectionError(OpenObserveError):
 class APIError(OpenObserveError):
     """Raised when OpenObserve API returns an error."""
 
-    def __init__(self, message: str, status_code: int | None = None, response_text: str | None = None):
+    def __init__(
+        self, message: str, status_code: int | None = None, response_text: str | None = None
+    ):
         super().__init__(message)
         self.status_code = status_code
         self.response_text = response_text
@@ -95,7 +97,11 @@ class OpenObserveClient:
         json_body = kwargs.get("json")
 
         # Log request with SQL if present
-        if isinstance(json_body, dict) and "query" in json_body and isinstance(json_body["query"], dict):
+        if (
+            isinstance(json_body, dict)
+            and "query" in json_body
+            and isinstance(json_body["query"], dict)
+        ):
             query = json_body["query"]
             sql = query.get("sql")
             if sql is not None:
@@ -198,6 +204,9 @@ class OpenObserveClient:
 
     def list_streams(self) -> Any:
         return self._request("GET", f"api/{self.org}/streams").json()
+
+    def get_stream_schema(self, stream: str) -> dict[str, Any]:
+        return self._request("GET", f"api/{self.org}/streams/{stream}/schema").json()
 
     def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         return self._request("GET", path, params=params).json()

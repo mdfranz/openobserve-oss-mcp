@@ -118,13 +118,7 @@ def create_mcp_server(
         "openWorldHint": True,
     }
 
-    @mcp.tool(
-        name="search_sql",
-        title="Search SQL",
-        description="Run an OpenObserve SQL query via /api/{org}/_search.",
-        annotations=read_only_annotations,
-    )
-    def search_sql(
+    def _search_sql_impl(
         sql: str,
         hours: int | None = None,
         start_micros: int | None = None,
@@ -133,7 +127,7 @@ def create_mcp_server(
         offset: int = 0,
     ) -> Any:
         logger.info(
-            "search_sql request: sql=%s hours=%s start_micros=%s end_micros=%s size=%s offset=%s",
+            "_search_sql_impl request: sql=%s hours=%s start_micros=%s end_micros=%s size=%s offset=%s",
             sql,
             hours,
             start_micros,
@@ -164,7 +158,7 @@ def create_mcp_server(
         effective_offset = max(0, int(offset))
 
         logger.info(
-            "search_sql executing: org=%s start=%s end=%s size=%s offset=%s",
+            "_search_sql_impl executing: org=%s start=%s end=%s size=%s offset=%s",
             client.org,
             start,
             end,
@@ -181,13 +175,110 @@ def create_mcp_server(
                 size=effective_size,
                 offset=effective_offset,
             )
-            logger.info("search_sql completed successfully")
+            logger.info("_search_sql_impl completed successfully")
             return _apply_max_chars(result, max_chars)
         except (APIError, AuthenticationError, OpenObserveConnectionError) as e:
-            logger.error("search_sql failed: %s", e)
+            logger.error("_search_sql_impl failed: %s", e)
             raise
         except Exception as e:
-            logger.error("search_sql unexpected error: %s", e, exc_info=True)
+            logger.error("_search_sql_impl unexpected error: %s", e, exc_info=True)
+            raise
+
+    @mcp.tool(
+        name="search_sql",
+        title="Search SQL",
+        description="Run an OpenObserve SQL query via /api/{org}/_search.",
+        annotations=read_only_annotations,
+    )
+    def search_sql(
+        sql: str,
+        hours: int | None = None,
+        start_micros: int | None = None,
+        end_micros: int | None = None,
+        size: int = 100,
+        offset: int = 0,
+    ) -> Any:
+        return _search_sql_impl(
+            sql=sql,
+            hours=hours,
+            start_micros=start_micros,
+            end_micros=end_micros,
+            size=size,
+            offset=offset,
+        )
+
+    @mcp.tool(
+        name="search_logs",
+        title="Search Logs",
+        description="Search logs in a stream using a full-text query string.",
+        annotations=read_only_annotations,
+    )
+    def search_logs(
+        query: str,
+        stream: str = "default",
+        hours: int = 1,
+        size: int = 100,
+        offset: int = 0,
+    ) -> Any:
+        logger.info("search_logs request: query=%s stream=%s hours=%s", query, stream, hours)
+
+        # Simple escaping for single quotes to prevent basic SQL errors
+        safe_query = query.replace("'", "''")
+
+        # Construct SQL for full-text search
+        # Using match_all which searches across all fields or fields configured for full text
+        sql = f"SELECT * FROM {stream} WHERE match_all('{safe_query}')"
+
+        return _search_sql_impl(
+            sql=sql,
+            hours=hours,
+            size=size,
+            offset=offset,
+        )
+
+    @mcp.tool(
+        name="get_log_volume",
+        title="Get Log Volume",
+        description="Get the volume of logs (count) over time (histogram).",
+        annotations=read_only_annotations,
+    )
+    def get_log_volume(
+        stream: str = "default",
+        hours: int = 24,
+        interval: str = "1 hour",
+    ) -> Any:
+        logger.info(
+            "get_log_volume request: stream=%s hours=%s interval=%s", stream, hours, interval
+        )
+
+        safe_interval = interval.replace("'", "''")
+
+        sql = f"SELECT histogram(_timestamp, '{safe_interval}') AS key, COUNT(*) AS num FROM {stream} GROUP BY key ORDER BY key"
+
+        return _search_sql_impl(
+            sql=sql,
+            hours=hours,
+            size=1000,
+            offset=0,
+        )
+
+    @mcp.tool(
+        name="get_stream_schema",
+        title="Get Stream Schema",
+        description="Get the schema (field names and types) for a specific stream.",
+        annotations=read_only_annotations,
+    )
+    def get_stream_schema(stream: str) -> Any:
+        logger.info("get_stream_schema executing: stream=%s", stream)
+        try:
+            result = client.get_stream_schema(stream)
+            logger.info("get_stream_schema completed successfully")
+            return _apply_max_chars(result, max_chars)
+        except (APIError, AuthenticationError, OpenObserveConnectionError) as e:
+            logger.error("get_stream_schema failed: %s", e)
+            raise
+        except Exception as e:
+            logger.error("get_stream_schema unexpected error: %s", e, exc_info=True)
             raise
 
     @mcp.tool(

@@ -9,9 +9,7 @@ from pydantic_ai import Agent
 from pydantic_ai import messages as mcp_messages
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 
-SYSTEM_PROMPT = (
-    "Explore data sources in OpenObserve using MCP tools based on the query"
-)
+SYSTEM_PROMPT = "Explore data sources in OpenObserve using MCP tools based on the query"
 
 COLOR_ENABLED = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
 COLOR_RESET = "\x1b[0m"
@@ -70,9 +68,10 @@ def _print_trace(messages: list[mcp_messages.ModelMessage]) -> None:
                     header = f"builtin tool return: {part.tool_name}"
                     print(_color(header, COLOR_MAGENTA))
 
+
 def main() -> None:
     server = MCPServerStreamableHTTP("http://127.0.0.1:8001/mcp")
-    agent = Agent("openai:gpt-5-mini", toolsets=[server], system_prompt=SYSTEM_PROMPT)
+    agent = Agent("openai:gpt-5-mini", toolsets=[server], system_prompt=SYSTEM_PROMPT, retries=3)
     print('OpenObserve MCP CLI. Type "/exit" to quit.')
     while True:
         try:
