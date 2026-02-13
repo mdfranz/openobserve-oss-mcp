@@ -4,19 +4,27 @@ These scripts demonstrate how to use `src/mcp_server_openobserve/oo_client.py` t
 
 ## Prerequisites
 
-Ensure you have your environment variables set:
+Copy `.env.example` to `.env` and configure your OpenObserve credentials:
 
 ```bash
-export ZO_ROOT_USER_EMAIL=mdfranz@gmail.com
-export ZO_ROOT_USER_PASSWORD='Complexpa$$789'
-export ZO_BASE_URL=http://127.0.0.1:5080
+cp ../.env.example ../.env
+# Edit .env with your actual credentials
 ```
 
-And activate your virtual environment:
+Ensure you have your environment variables set (or source the `.env` file):
 
 ```bash
-source ../.venv/bin/activate
-pip install -r ../requirements.txt
+export ZO_ROOT_USER_EMAIL=your-email@example.com
+export ZO_ROOT_USER_PASSWORD='your-password'
+export ZO_BASE_URL=http://127.0.0.1:5080
+export ZO_ORG=default
+```
+
+Install dependencies using `uv`:
+
+```bash
+cd ..
+uv sync
 ```
 
 ## Available Scripts
@@ -24,10 +32,6 @@ pip install -r ../requirements.txt
 ### 0. MCP Client Smoke Test
 
 Uses Pydantic AI's MCP client to call tools on `mcp-server-openobserve` over either HTTP or stdio.
-
-```bash
-pip install -r ../requirements.txt
-```
 
 HTTP (server already running):
 
