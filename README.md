@@ -270,6 +270,7 @@ See the `scripts/` directory for example usage:
 - `search_logs.py` - Query logs with SQL
 - `ingest_sample_data.py` - Generate test data
 - `mcp_client_openobserve.py` - Test MCP server functionality
+- `pydantic_ai_agent_mcp_http.py` - Interactive AI agent exploring data via MCP
 
 See [scripts/README.md](scripts/README.md) for detailed usage.
 

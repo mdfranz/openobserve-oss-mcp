@@ -56,6 +56,22 @@ export ZO_ACCESS_KEY="..."
 python3 mcp_client_openobserve.py stdio
 ```
 
+### 0.5. Interactive AI Agent
+
+An interactive CLI agent powered by Pydantic AI that connects to the MCP server to help you explore your data using natural language.
+
+**Prerequisites:**
+- The MCP server must be running on `http://127.0.0.1:8001/mcp` (see "Running the Server" in the main README).
+- You need a valid `OPENAI_API_KEY` environment variable.
+
+**Usage:**
+
+```bash
+uv run scripts/pydantic_ai_agent_mcp_http.py
+```
+
+Type your queries in the prompt. Type `/exit` to quit.
+
 ### 1. List Streams
 
 Lists all available streams and their basic stats (document count, size).
