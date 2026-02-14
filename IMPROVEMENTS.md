@@ -137,11 +137,44 @@ APIError exceptions now include:
 - Whitelist-based path validation
 
 #### Parameters
-- Size and offset bounds checking
+- Size and bounds checking
 - Key-value pair format validation
 - Query parameter sanitization
 
-## 5. Updated Configuration Documentation
+## 6. Prompts for User Guidance
+
+### Problem
+Users often struggle to know where to start or how to formulate complex SQL queries for OpenObserve. They need guidance on the "best practices" for using the available tools.
+
+### Solution
+Added 4 predefined prompts (interactive templates) to the MCP server. These prompts allow users to select a high-level task, and the server provides the LLM with a detailed, step-by-step "playbook" on how to execute it using the available tools.
+
+### New Prompts
+1.  **`investigate_errors(stream, hours)`**:
+    -   **Goal**: Quickly find errors in logs.
+    -   **Workflow**: Checks schema -> Runs SQL query for 'error' level or message -> Summarizes findings.
+    -   **Usage**: Great for "on-call" style debugging.
+
+2.  **`summarize_activity(stream)`**:
+    -   **Goal**: High-level overview of a data stream.
+    -   **Workflow**: Gets log volume histogram -> Samples recent logs -> Describes data patterns.
+    -   **Usage**: ideal for "What is this stream?" questions.
+
+3.  **`generate_sql_query(goal, stream)`**:
+    -   **Goal**: Help users write correct SQL without needing to know the schema beforehand.
+    -   **Workflow**: Inspects schema -> Writes SQL -> Explains it.
+    -   **Usage**: For users who know *what* they want but not *how* to write the SQL.
+
+4.  **`smart_search(query)`**:
+    -   **Goal**: Route users to the right tool (SQL vs. Full-text).
+    -   **Workflow**: Lists streams -> Analyzes query complexity -> Recommends `search_logs` (simple) or `search_sql` (complex).
+
+### Benefits
+-   **Reduced Friction**: Users don't need to "prompt engineer" the LLM; the developer has done it for them.
+-   **Standardized Workflows**: Ensures the LLM follows a logical path (e.g., "Check schema BEFORE writing SQL").
+-   **Discoverability**: Users can see what capabilities are available via the client UI.
+
+## 7. Updated Configuration Documentation
 
 Enhanced `.env.example` with:
 - New `MCP_LOG_LEVEL` variable

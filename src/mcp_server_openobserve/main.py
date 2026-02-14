@@ -6,6 +6,7 @@ import os
 import sys
 from urllib.parse import urlparse
 
+from dotenv import load_dotenv
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 
 from .client import ConfigurationError, OpenObserveClient
@@ -42,6 +43,9 @@ def validate_positive_int(value: int, name: str, min_val: int = 1) -> int:
 
 
 def main() -> None:
+    # Load environment variables from .env file
+    load_dotenv()
+
     # Set up logging early so validation errors are logged
     log_level = os.getenv("MCP_LOG_LEVEL", "INFO").upper()
     setup_logging(log_level)

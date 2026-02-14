@@ -274,7 +274,22 @@ def create_mcp_server(
             result = client.get_stream_schema(stream)
             logger.info("get_stream_schema completed successfully")
             return _apply_max_chars(result, max_chars)
-        except (APIError, AuthenticationError, OpenObserveConnectionError) as e:
+        except APIError as e:
+            if e.status_code == 404:
+                logger.warning("Schema not found for stream '%s' (404). Returning helpful hint.", stream)
+                return {
+                    "error": "Schema not found",
+                    "stream": stream,
+                    "message": (
+                        f"The schema for '{stream}' could not be retrieved (404 Not Found). "
+                        "This often happens with METRIC streams in OpenObserve. "
+                        "You can likely still query it directly."
+                    ),
+                    "suggestion": f"Try querying sample data: SELECT * FROM {stream} LIMIT 1",
+                }
+            logger.error("get_stream_schema failed: %s", e)
+            raise
+        except (AuthenticationError, OpenObserveConnectionError) as e:
             logger.error("get_stream_schema failed: %s", e)
             raise
         except Exception as e:
@@ -341,5 +356,46 @@ def create_mcp_server(
         except Exception as e:
             logger.error("get_api unexpected error: %s", e, exc_info=True)
             raise
+
+    @mcp.prompt()
+    def investigate_errors(stream: str = "default", hours: int = 1) -> str:
+        return f"""
+        Please investigate the '{stream}' stream for errors over the last {hours} hours.
+
+        1. First, use get_stream_schema('{stream}') to understand the available fields.
+        2. Then, use search_sql with a query like "SELECT * FROM {stream} WHERE level='error' OR message LIKE '%error%'"
+        3. Summarize any critical issues found.
+        """
+
+    @mcp.prompt()
+    def summarize_activity(stream: str = "default") -> str:
+        return f"""
+        Please provide a summary of activity for the '{stream}' stream.
+
+        1. Use get_log_volume(stream='{stream}', hours=24) to see the traffic patterns.
+        2. Use search_sql to sample recent logs: "SELECT * FROM {stream} LIMIT 10"
+        3. Describe the type of data being logged and any notable volume spikes.
+        """
+
+    @mcp.prompt()
+    def generate_sql_query(goal: str, stream: str = "default") -> str:
+        return f"""
+        I need to write a SQL query for the '{stream}' stream to achieve this goal: {goal}
+
+        Please:
+        1. Inspect the schema using get_stream_schema('{stream}').
+        2. Construct a valid SQL query compatible with OpenObserve (which uses a syntax similar to PostgreSQL/MySQL but with some specific functions).
+        3. Explain the query.
+        """
+
+    @mcp.prompt()
+    def smart_search(query: str) -> str:
+        return f"""
+        The user wants to find: "{query}"
+
+        1. List the available streams using list_streams().
+        2. If the query is simple text, use search_logs().
+        3. If the query requires filtering by specific fields or aggregations, use search_sql().
+        """
 
     return mcp
