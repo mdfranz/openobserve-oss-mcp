@@ -6,6 +6,7 @@ import pprint
 import sys
 import readline
 import atexit
+import argparse
 
 from pydantic_ai import Agent
 from pydantic_ai import messages as mcp_messages
@@ -15,7 +16,7 @@ SYSTEM_PROMPT = """
 You are an expert OpenObserve Assistant. Your goal is to help users query and analyze their logs and observability data.
 
 Follow these Standard Operating Procedures:
-1. **Discovery**: If you don't know which stream to use, call `list_streams`.
+1. **Discovery (CRITICAL)**: You do NOT know the available streams. You MUST call `list_streams` first to see what streams are available. NEVER guess a stream name (like 'container_cpu_usage' or 'logs').
 2. **Schema Awareness**: Before writing complex SQL with `search_sql`, ALWAYS call `get_stream_schema` for the target stream to ensure you use correct field names and types.
 3. **Search Strategy**:
    - For simple text searches (e.g. "find errors"), use `search_logs`.
@@ -91,9 +92,17 @@ log_level = os.getenv("MCP_AGENT_LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
 logger = logging.getLogger(__name__)
 
-# ... existing imports ...
-
 def main() -> None:
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="OpenObserve MCP Agent CLI")
+    parser.add_argument(
+        "--model", 
+        type=str, 
+        default="openai:gpt-5-mini", 
+        help="Model identifier (e.g., 'openai:gpt-5-mini', 'google:gemini-1.5-pro', 'anthropic:claude-3-5-sonnet-latest')"
+    )
+    args = parser.parse_args()
+
     # Setup readline history
     history_file = os.path.expanduser("~/.openobserve_mcp_history")
     try:
@@ -104,8 +113,16 @@ def main() -> None:
     # Save history on exit
     atexit.register(readline.write_history_file, history_file)
 
-    server = MCPServerStreamableHTTP("http://127.0.0.1:8001/mcp")
-    agent = Agent("openai:gpt-5-mini", toolsets=[server], system_prompt=SYSTEM_PROMPT, retries=3)
+    server = MCPServerStreamableHTTP("http://127.0.0.1:8001/mcp", max_retries=5)
+    
+    model_name = args.model
+    if model_name.startswith("google:"):
+        print(f"{_color('Info:', COLOR_YELLOW)} 'google:' provider is ambiguous. Assuming 'google-gla:' (Google Generative Language API).")
+        model_name = model_name.replace("google:", "google-gla:", 1)
+
+    print(f"Initializing agent with model: {_color(model_name, COLOR_CYAN)}")
+    agent = Agent(model_name, toolsets=[server], system_prompt=SYSTEM_PROMPT, retries=5)
+    
     print('OpenObserve MCP CLI. Type "/exit" to quit.')
     
     while True:
