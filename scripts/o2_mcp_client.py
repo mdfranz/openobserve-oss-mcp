@@ -98,8 +98,8 @@ def main() -> None:
     parser.add_argument(
         "--model", 
         type=str, 
-        default="openai:gpt-5-mini", 
-        help="Model identifier (e.g., 'openai:gpt-5-mini', 'google:gemini-1.5-pro', 'anthropic:claude-3-5-sonnet-latest')"
+        default="openai:gpt-5.2", 
+        help="Model identifier (e.g., 'openai:gpt-5.2', 'google:gemini-3-flash-preview', 'anthropic:claude-haiku-4-5')"
     )
     args = parser.parse_args()
 
