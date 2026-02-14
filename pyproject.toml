@@ -9,6 +9,7 @@ dependencies = [
   "openai>=2.20.0",
   "pydantic-ai-slim[mcp]>=1.58.0",
   "requests>=2.31",
+  "python-dotenv>=1.2.1",
 ]
 
 [project.scripts]
