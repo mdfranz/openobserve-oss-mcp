@@ -274,7 +274,22 @@ def create_mcp_server(
             result = client.get_stream_schema(stream)
             logger.info("get_stream_schema completed successfully")
             return _apply_max_chars(result, max_chars)
-        except (APIError, AuthenticationError, OpenObserveConnectionError) as e:
+        except APIError as e:
+            if e.status_code == 404:
+                logger.warning("Schema not found for stream '%s' (404). Returning helpful hint.", stream)
+                return {
+                    "error": "Schema not found",
+                    "stream": stream,
+                    "message": (
+                        f"The schema for '{stream}' could not be retrieved (404 Not Found). "
+                        "This often happens with METRIC streams in OpenObserve. "
+                        "You can likely still query it directly."
+                    ),
+                    "suggestion": f"Try querying sample data: SELECT * FROM {stream} LIMIT 1",
+                }
+            logger.error("get_stream_schema failed: %s", e)
+            raise
+        except (AuthenticationError, OpenObserveConnectionError) as e:
             logger.error("get_stream_schema failed: %s", e)
             raise
         except Exception as e:

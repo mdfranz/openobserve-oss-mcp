@@ -4,12 +4,26 @@ from __future__ import annotations
 import os
 import pprint
 import sys
+import readline
+import atexit
 
 from pydantic_ai import Agent
 from pydantic_ai import messages as mcp_messages
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 
-SYSTEM_PROMPT = "Explore data sources in OpenObserve using MCP tools based on the query"
+SYSTEM_PROMPT = """
+You are an expert OpenObserve Assistant. Your goal is to help users query and analyze their logs and observability data.
+
+Follow these Standard Operating Procedures:
+1. **Discovery**: If you don't know which stream to use, call `list_streams`.
+2. **Schema Awareness**: Before writing complex SQL with `search_sql`, ALWAYS call `get_stream_schema` for the target stream to ensure you use correct field names and types.
+3. **Search Strategy**:
+   - For simple text searches (e.g. "find errors"), use `search_logs`.
+   - For aggregations, specific field filtering, or time-based analysis, use `search_sql`.
+4. **SQL Syntax**: OpenObserve uses a SQL dialect similar to PostgreSQL/MySQL.
+
+When investigating issues, look for 'error' or 'exception' in the logs unless directed otherwise.
+"""
 
 COLOR_ENABLED = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
 COLOR_RESET = "\x1b[0m"
@@ -69,10 +83,31 @@ def _print_trace(messages: list[mcp_messages.ModelMessage]) -> None:
                     print(_color(header, COLOR_MAGENTA))
 
 
+import logging
+
+# Configure logging. Default to WARNING to reduce noise.
+# Can be set to INFO or DEBUG via MCP_AGENT_LOG_LEVEL environment variable.
+log_level = os.getenv("MCP_AGENT_LOG_LEVEL", "WARNING").upper()
+logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
+logger = logging.getLogger(__name__)
+
+# ... existing imports ...
+
 def main() -> None:
+    # Setup readline history
+    history_file = os.path.expanduser("~/.openobserve_mcp_history")
+    try:
+        readline.read_history_file(history_file)
+    except FileNotFoundError:
+        pass
+    
+    # Save history on exit
+    atexit.register(readline.write_history_file, history_file)
+
     server = MCPServerStreamableHTTP("http://127.0.0.1:8001/mcp")
     agent = Agent("openai:gpt-5-mini", toolsets=[server], system_prompt=SYSTEM_PROMPT, retries=3)
     print('OpenObserve MCP CLI. Type "/exit" to quit.')
+    
     while True:
         try:
             prompt = input("user> ").strip()
@@ -88,9 +123,15 @@ def main() -> None:
         if prompt == "/exit":
             break
 
-        result = agent.run_sync(prompt)
-        _print_trace(result.all_messages())
-
+        try:
+            result = agent.run_sync(prompt)
+            _print_trace(result.all_messages())
+        except Exception as e:
+            print(f"{_color('Error:', COLOR_MAGENTA)} {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"\n{_color('Tip:', COLOR_YELLOW)} If you see 'UnexpectedModelBehavior' or tool errors, check your MCP server logs.")
+            print("Ensure the MCP server is running with valid credentials in .env")
 
 if __name__ == "__main__":
     main()
