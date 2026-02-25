@@ -143,6 +143,26 @@ def main() -> None:
         try:
             result = agent.run_sync(prompt)
             _print_trace(result.all_messages())
+
+            # Print out the SQL queries used after the response
+            queries = []
+            for msg in result.all_messages():
+                if isinstance(msg, mcp_messages.ModelResponse):
+                    for part in msg.parts:
+                        if getattr(part, "tool_name", None) == "search_sql":
+                            try:
+                                args = part.args_as_dict()
+                                if 'sql' in args and args['sql'] not in queries:
+                                    queries.append(args['sql'])
+                            except Exception:
+                                pass
+            
+            if queries:
+                print(f"\n{_color('--- SQL Queries Used ---', COLOR_CYAN)}")
+                for i, q in enumerate(queries, 1):
+                    print(f"{_color(f'Query {i}:', COLOR_YELLOW)}\n{q}")
+                print(f"{_color('------------------------', COLOR_CYAN)}\n")
+
         except Exception as e:
             print(f"{_color('Error:', COLOR_MAGENTA)} {e}")
             import traceback

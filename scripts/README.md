@@ -107,6 +107,19 @@ python3 search_logs.py --stream my_stream --limit 20
 python3 search_logs.py --sql "SELECT * FROM my_stream WHERE level='ERROR' LIMIT 5"
 ```
 
+### 3.5. SQL Shell
+
+An interactive SQL shell for OpenObserve. Supports command-line history and basic table formatting.
+
+```bash
+uv run scripts/oo_sql_shell.py
+```
+
+Inside the shell:
+- Type any SQL query (e.g., `SELECT * FROM suricata LIMIT 10`)
+- `/streams` - List all available streams
+- `/exit` or `/quit` - Exit the shell
+
 ### 4. Delete Stream
 
 Delete a stream (be careful!).
