@@ -3,6 +3,7 @@ name = "mcp-server-openobserve"
 version = "0.1.0"
 description = "An MCP server for querying OpenObserve (read/query only)."
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
   "fastmcp>=2.14,<3",
